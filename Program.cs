@@ -11,8 +11,10 @@ namespace _32bitsAllCombinaions
             var privateKeyByteArray = new byte[32];
             privateKeyByteArray.RandomPopulate();
 
-            var generatedPrivateKeys = new List<byte[]>();
-            generatedPrivateKeys.Add(privateKeyByteArray);
+            var generatedPrivateKeys = new List<byte[]>
+            {
+                privateKeyByteArray
+            };
 
             generatedPrivateKeys.AddRange(privateKeyByteArray.EachPosition256Values());
 

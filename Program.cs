@@ -1,6 +1,7 @@
-﻿using System.Linq;
+﻿using System.Net.Security;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace _32bitsAllCombinaions
 {
@@ -8,55 +9,82 @@ namespace _32bitsAllCombinaions
     {
         static void Main(string[] args)
         {
-            var privateKeyByteArray = new byte[32];
+            var privateKeyByteArray = new byte[4];
             privateKeyByteArray.RandomPopulate();
 
-            var generatedPrivateKeys = new List<byte[]>
+            var stringValue = Convert.ToBase64String(privateKeyByteArray);
+            Console.WriteLine($"PrivateKey: {stringValue}");
+
+            var generatedPrivateKeys = new List<string>
             {
-                privateKeyByteArray
+                stringValue
             };
 
-            generatedPrivateKeys.AddRange(privateKeyByteArray.EachPosition256Values());
+            var generatedPrivateKeyByteArray = new byte[4];
+            generatedPrivateKeyByteArray.EmptyByteArray();
 
+            int nGeneratedKey = 0;
+            while(true)
+            {
+                try
+                {
+                    NextIteration(generatedPrivateKeyByteArray, privateKeyByteArray);
+                    nGeneratedKey ++;
+                    Console.WriteLine($"[{nGeneratedKey}] PrivateKey: {Convert.ToBase64String(generatedPrivateKeyByteArray)} ({string.Join(".", generatedPrivateKeyByteArray)})");
+                }
+                catch (System.Exception ex)
+                {
+                    break;
+                }
+            }
+                            
             Console.ReadLine();
         }
-    }
 
-    internal static class ByteArrayExtensions
-    {
-        public static void RandomPopulate(this byte[] byteArray)
+        public static void NextIteration(byte[] input)
         {
-            for (var i = 0; i < 32; i++)
+            if (input.All(x => x == 255))
+                throw new InvalidOperationException("there is no iteration left");
+
+            var converted = input.Select(x => (int) x).ToArray();
+            converted[0]++;
+            for (var i = 0; i < converted.Length; i++)
             {
-                byteArray[i] = (byte)i;
+                if (converted[i] == 256)
+                {
+                    converted[i] = 0;
+                    converted[i + 1]++;
+                }
+            }
+            for (var i = 0; i < input.Length; i++)
+            {
+                input[i] = (byte) converted[i];
             }
         }
 
-        public static IList<byte[]> EachPosition256Values(this byte[] byteArray)
+        public static void NextIteration(byte[] input, byte[] allowedValues)
         {
-            var listRET = new List<byte[]>();
+            if (input.All(x => x == allowedValues.Last()))
+                throw new InvalidOperationException("there is no iteration left");
 
-            for (var i = 0; i < 32; i++)
+            int allowedValuesCursor = Array.FindIndex(allowedValues, x => x == input[0]) + 1;
+
+            var converted = input.Select(x => (int) x).ToArray();
+            converted[0] = allowedValues[allowedValuesCursor];
+            for (var i = 0; i < converted.Length; i++)
             {
-                listRET.AddRange(byteArray.ByteArrayPosition256Values(i));
+                if (converted[i] == allowedValues.Last())
+                {
+                    converted[i] = 0;
+
+                    var indexNextByteInConverted = Array.FindIndex(allowedValues, x => x == converted[i+1]);
+                    converted[i + 1] = allowedValues[indexNextByteInConverted + 1];
+                }
             }
-
-            return listRET;
-        }
-
-        public static IList<byte[]> ByteArrayPosition256Values(this byte[] byteArray, int position)
-        {
-            var listRET = new List<byte[]>();
-
-            for (var i = 0; i < 256; i++)
+            for (var i = 0; i < input.Length; i++)
             {
-                var clonedByteArray = byteArray.ToArray();
-
-                clonedByteArray[position] = (byte)i; 
-                listRET.Add(clonedByteArray);
+                input[i] = (byte) converted[i];
             }
-
-            return listRET;
         }
     }
 }
